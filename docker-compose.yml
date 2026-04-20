@@ -1,0 +1,90 @@
+version: '3.8'
+
+services:
+
+  # ── LOAD BALANCER (punto de entrada único) ───────────────────────────────
+  nginx:
+    image: nginx:alpine
+    container_name: demo-sd-nginx
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./dashboard:/usr/share/nginx/html:ro
+    depends_on:
+      - api-1
+      - api-2
+      - api-3
+    restart: always
+
+  # ── NODOS API (3 réplicas del mismo servicio) ─────────────────────────────
+  api-1:
+    build: ./api
+    container_name: demo-sd-api-1
+    environment:
+      NODE_ID: "nodo-1"
+      NODE_COLOR: "#00B4D8"
+      PORT: 3001
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    restart: on-failure
+
+  api-2:
+    build: ./api
+    container_name: demo-sd-api-2
+    environment:
+      NODE_ID: "nodo-2"
+      NODE_COLOR: "#10B981"
+      PORT: 3001
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    restart: on-failure
+
+  api-3:
+    build: ./api
+    container_name: demo-sd-api-3
+    environment:
+      NODE_ID: "nodo-3"
+      NODE_COLOR: "#F59E0B"
+      PORT: 3001
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    restart: on-failure
+
+  # ── REDIS (caché distribuida + pub/sub entre nodos) ───────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: demo-sd-redis
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # ── POSTGRESQL (persistencia de votos) ────────────────────────────────────
+  postgres:
+    image: postgres:15-alpine
+    container_name: demo-sd-postgres
+    environment:
+      POSTGRES_DB: votacion
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin123
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d votacion"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  postgres_data:

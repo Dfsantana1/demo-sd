@@ -1,0 +1,15 @@
+{
+  "name": "demo-sd-api",
+  "version": "1.0.0",
+  "description": "API Node para demo de Sistema Distribuido",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "redis": "^4.6.12",
+    "pg": "^8.11.3",
+    "cors": "^2.8.5"
+  }
+}

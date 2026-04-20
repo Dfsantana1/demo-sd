@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Logs · Demo</title>
+<style>
+  :root {
+    --navy:  #0A1628;
+    --dark:  #0D1B2A;
+    --card:  #112033;
+    --blue:  #1A3A6B;
+    --cyan:  #00B4D8;
+    --green: #10B981;
+    --amber: #F59E0B;
+    --red:   #EF4444;
+    --gray:  #90A4AE;
+    --white: #ffffff;
+    --muted: #4A6080;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--navy);
+    color: var(--white);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    padding: 2rem;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: linear-gradient(135deg, #0A1628 0%, #1A3A6B 100%);
+    border-bottom: 2px solid var(--cyan);
+    padding: 1.2rem 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 2rem;
+    border-radius: 8px;
+  }
+  header h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: .05em; }
+  header h1 span { color: var(--cyan); }
+  .header-badge {
+    background: var(--cyan);
+    color: var(--navy);
+    font-size: .7rem;
+    font-weight: 700;
+    padding: .25rem .7rem;
+    border-radius: 999px;
+    letter-spacing: .1em;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.6} }
+
+  /* ── EVENT LOG ── */
+  .log-card {
+    background: var(--card);
+    border: 1px solid var(--blue);
+    border-radius: 10px;
+    padding: 1.2rem;
+    height: calc(100vh - 160px);
+    display: flex;
+    flex-direction: column;
+  }
+  .log-inner {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column-reverse;
+  }
+  .log-inner::-webkit-scrollbar { width: 8px; }
+  .log-inner::-webkit-scrollbar-track { background: var(--dark); }
+  .log-inner::-webkit-scrollbar-thumb { background: var(--muted); border-radius: 4px; }
+
+  .log-entry {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: .8rem 1rem;
+    border-radius: 6px;
+    font-size: 1rem;
+    animation: fadeIn .3s ease;
+    margin-bottom: 4px;
+    background: rgba(13, 27, 42, 0.4);
+  }
+  .log-entry:hover { background: var(--dark); }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+
+  .log-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+  .log-time { color: var(--muted); font-size: 0.9rem; min-width: 80px; }
+  .log-text { flex: 1; }
+  .log-text .option-a { color: var(--cyan);  font-weight: 600; }
+  .log-text .option-b { color: var(--amber); font-weight: 600; }
+  .log-node { font-size: 0.9rem; padding: .3rem .8rem; border-radius: 6px; font-weight: 600; color: var(--navy); }
+
+  .log-empty { color: var(--muted); font-size: 1.2rem; text-align: center; padding: 4rem 0; }
+
+  .connection-bar {
+    display: flex; align-items: center; gap: .8rem;
+    font-size: 1rem; color: var(--gray); margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--blue);
+  }
+  .connection-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); }
+  .connection-dot.connected { background: var(--green); animation: pulse 2s infinite; }
+
+  .back-link {
+    color: var(--cyan);
+    text-decoration: none;
+    font-size: 1rem;
+    margin-bottom: 1rem;
+    display: inline-block;
+  }
+</style>
+</head>
+<body>
+
+<a href="/" class="back-link">← Volver al Dashboard</a>
+
+<header>
+  <h1>🌐 <span>Sistema Distribuido</span> · Logs en Tiempo Real</h1>
+  <div class="header-badge">EN VIVO</div>
+</header>
+
+<div class="log-card">
+  <div class="log-inner" id="event-log">
+    <div class="log-empty">Esperando eventos de votación...</div>
+  </div>
+  <div class="connection-bar">
+    <div class="connection-dot" id="sse-dot"></div>
+    <span id="sse-status">Conectando al stream de eventos...</span>
+  </div>
+</div>
+
+<script>
+  let sseReconnecting = false;
+  let es = null;
+  const logEntries = [];
+  const MAX_LOGS = 200; // Podría manejar muchos logs
+
+  function addLogEntry(data) {
+    const log = document.getElementById('event-log');
+    const empty = log.querySelector('.log-empty');
+    if (empty) empty.remove();
+
+    const time   = new Date(data.timestamp).toLocaleTimeString('es');
+    const isA    = data.option === 'A';
+    const label  = isA ? '<span class="option-a">Microservicios</span>' : '<span class="option-b">Monolito</span>';
+
+    const entry = document.createElement('div');
+    entry.className = 'log-entry';
+    entry.innerHTML = `
+      <div class="log-dot" style="background:${data.nodeColor}"></div>
+      <div class="log-time">${time}</div>
+      <div class="log-text">Voto → ${label} recibido</div>
+      <div class="log-node" style="background:${data.nodeColor}">Procesado por ${data.processedBy}</div>
+    `;
+
+    log.prepend(entry);
+    logEntries.push(entry);
+
+    if (logEntries.length > MAX_LOGS) {
+      const old = logEntries.shift();
+      old.remove();
+    }
+  }
+
+  function startSSE() {
+    es = new EventSource('/api/events');
+    const dot = document.getElementById('sse-dot');
+    const lbl = document.getElementById('sse-status');
+
+    es.onopen = () => {
+      dot.className = 'connection-dot connected';
+      lbl.textContent = 'Recibiendo eventos desde Redis Pub/Sub...';
+      sseReconnecting = false;
+    };
+
+    es.onerror = (e) => {
+      dot.className = 'connection-dot';
+      lbl.textContent = 'Conexión perdida. Reconectando...';
+      es.close();
+      if (!sseReconnecting) {
+        sseReconnecting = true;
+        setTimeout(startSSE, 3000);
+      }
+    };
+
+    es.onmessage = (e) => {
+      const event = JSON.parse(e.data);
+      if (event.type === 'vote') addLogEntry(event);
+    };
+  }
+
+  startSSE();
+</script>
+
+</body>
+</html>

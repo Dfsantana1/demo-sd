@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Votación · Demo</title>
+<style>
+  :root {
+    --navy:  #0A1628;
+    --dark:  #0D1B2A;
+    --card:  #112033;
+    --blue:  #1A3A6B;
+    --cyan:  #00B4D8;
+    --amber: #F59E0B;
+    --gray:  #90A4AE;
+    --white: #ffffff;
+    --red:   #EF4444;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--navy);
+    color: var(--white);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .container {
+    max-width: 600px;
+    width: 100%;
+    padding: 2rem;
+  }
+  
+  .vote-section {
+    background: var(--card);
+    border: 1px solid var(--blue);
+    border-radius: 12px;
+    padding: 3rem 2rem;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  }
+
+  .vote-question { font-size: 1.4rem; font-weight: 600; margin-bottom: 2rem; color: var(--white); }
+  .vote-question span { color: var(--gray); font-size: 1rem; display: block; margin-top: 0.5rem; }
+
+  .vote-buttons { display: flex; gap: 1.5rem; justify-content: center; flex-direction: column; }
+  .vote-btn {
+    padding: 1.2rem 2.5rem;
+    border: none;
+    border-radius: 10px;
+    font-size: 1.2rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform .1s, opacity .2s, box-shadow .2s;
+    letter-spacing: .02em;
+    width: 100%;
+  }
+  .vote-btn:hover   { transform: scale(1.02); }
+  .vote-btn:active  { transform: scale(0.98); }
+  .vote-btn.btn-a   { background: var(--cyan);  color: var(--navy); box-shadow: 0 4px 15px rgba(0, 180, 216, 0.4); }
+  .vote-btn.btn-b   { background: var(--amber); color: var(--navy); box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4); }
+  .vote-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+  #last-processed {
+    margin-top: 2rem;
+    font-size: 1rem;
+    color: var(--gray);
+    min-height: 1.5em;
+    transition: color .3s;
+  }
+
+  .back-link {
+    display: inline-block;
+    margin-top: 2rem;
+    color: var(--cyan);
+    text-decoration: none;
+    font-size: 0.9rem;
+  }
+  .back-link:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="vote-section">
+    <div class="vote-question">
+      ¿Cuál arquitectura es mejor para un sistema grande?
+      <span>Toca tu opción favorita</span>
+    </div>
+    <div class="vote-buttons">
+      <button class="vote-btn btn-a" onclick="vote('A')">⚡ Microservicios</button>
+      <button class="vote-btn btn-b" onclick="vote('B')">🏛️ Monolito</button>
+    </div>
+    <div id="last-processed"></div>
+  </div>
+  <div style="text-align: center;">
+    <a href="/" class="back-link">← Volver al Dashboard</a>
+  </div>
+</div>
+
+<script>
+  async function vote(option) {
+    const btns = document.querySelectorAll('.vote-btn');
+    btns.forEach(b => b.disabled = true);
+
+    const el = document.getElementById('last-processed');
+    el.style.color = 'var(--gray)';
+    el.textContent = 'Enviando voto...';
+
+    try {
+      const res  = await fetch('/api/vote', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ option }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        el.style.color = 'var(--cyan)';
+        el.textContent = '¡Voto registrado correctamente!';
+      }
+    } catch (e) {
+      el.style.color = 'var(--red)';
+      el.textContent = '❌ Error al enviar el voto';
+    }
+
+    setTimeout(() => { 
+      btns.forEach(b => b.disabled = false); 
+      el.textContent = '';
+    }, 2000);
+  }
+</script>
+
+</body>
+</html>
