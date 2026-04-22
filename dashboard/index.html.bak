@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sistema Distribuido · Demo</title>
+<style>
+  :root {
+    --navy:  #0A1628;
+    --dark:  #0D1B2A;
+    --card:  #112033;
+    --blue:  #1A3A6B;
+    --cyan:  #00B4D8;
+    --green: #10B981;
+    --amber: #F59E0B;
+    --red:   #EF4444;
+    --gray:  #90A4AE;
+    --white: #ffffff;
+    --muted: #4A6080;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--navy);
+    color: var(--white);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    padding-bottom: 2rem;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: linear-gradient(135deg, #0A1628 0%, #1A3A6B 100%);
+    border-bottom: 2px solid var(--cyan);
+    padding: 1.2rem 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  header h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: .05em; }
+  header h1 span { color: var(--cyan); }
+  .header-badge {
+    background: var(--cyan);
+    color: var(--navy);
+    font-size: .7rem;
+    font-weight: 700;
+    padding: .25rem .7rem;
+    border-radius: 999px;
+    letter-spacing: .1em;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.6} }
+
+  /* ── LAYOUT ── */
+  .container { max-width: 1100px; margin: 0 auto; padding: 1.5rem 1.5rem 0; }
+
+  section { margin-bottom: 1.5rem; }
+  .section-title {
+    font-size: .7rem;
+    font-weight: 700;
+    letter-spacing: .15em;
+    color: var(--cyan);
+    text-transform: uppercase;
+    margin-bottom: .8rem;
+  }
+
+  /* ── NODES ── */
+  .nodes-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+
+  .node-card {
+    background: var(--card);
+    border: 1.5px solid var(--muted);
+    border-radius: 10px;
+    padding: 1rem 1.2rem;
+    transition: border-color .3s, box-shadow .3s;
+    position: relative;
+    overflow: hidden;
+  }
+  .node-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--node-color, var(--muted));
+    transition: background .3s;
+  }
+  .node-card.online  { border-color: var(--node-color, var(--muted)); box-shadow: 0 0 16px -4px var(--node-color, transparent); }
+  .node-card.offline { border-color: var(--red); opacity: .65; }
+  .node-card.offline::before { background: var(--red); }
+
+  .node-header { display: flex; align-items: center; gap: .6rem; margin-bottom: .7rem; }
+  .status-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--gray); flex-shrink: 0;
+    transition: background .3s;
+  }
+  .online  .status-dot { background: var(--green); box-shadow: 0 0 6px var(--green); animation: pulse 2s infinite; }
+  .offline .status-dot { background: var(--red); animation: none; }
+  .node-name { font-weight: 700; font-size: 1rem; }
+  .node-tag  { font-size: .7rem; color: var(--gray); margin-left: auto; background: var(--dark); padding: .15rem .5rem; border-radius: 4px; }
+
+  .node-stats { display: flex; gap: 1.2rem; }
+  .stat-val  { font-size: 1.4rem; font-weight: 700; line-height: 1; }
+  .stat-label { font-size: .65rem; color: var(--gray); text-transform: uppercase; letter-spacing: .08em; }
+
+  .node-uptime { font-size: .75rem; color: var(--muted); margin-top: .5rem; }
+
+  /* ── VOTING ── */
+  .vote-section {
+    background: var(--card);
+    border: 1px solid var(--blue);
+    border-radius: 10px;
+    padding: 1.5rem;
+    text-align: center;
+  }
+  .vote-question { font-size: 1.1rem; font-weight: 600; margin-bottom: 1.2rem; color: var(--gray); }
+  .vote-question span { color: var(--white); }
+
+  .vote-buttons { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+  .vote-btn {
+    padding: .9rem 2.5rem;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.05rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform .1s, opacity .2s;
+    letter-spacing: .02em;
+  }
+  .vote-btn:hover   { transform: scale(1.04); }
+  .vote-btn:active  { transform: scale(.97);  }
+  .vote-btn.btn-a   { background: var(--cyan);  color: var(--navy); }
+  .vote-btn.btn-b   { background: var(--amber); color: var(--navy); }
+  .vote-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+
+  #last-processed {
+    margin-top: 1rem;
+    font-size: .85rem;
+    color: var(--gray);
+    min-height: 1.2em;
+    transition: color .3s;
+  }
+
+  /* ── RESULTS ── */
+  .results-card {
+    background: var(--card);
+    border: 1px solid var(--blue);
+    border-radius: 10px;
+    padding: 1.4rem;
+  }
+  .result-row { margin-bottom: 1rem; }
+  .result-row:last-child { margin-bottom: 0; }
+  .result-label-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: .4rem; }
+  .result-name  { font-weight: 600; font-size: .95rem; }
+  .result-count { font-size: .85rem; color: var(--gray); }
+  .result-pct   { font-size: 1.1rem; font-weight: 700; }
+
+  .bar-bg   { height: 14px; background: var(--dark); border-radius: 7px; overflow: hidden; }
+  .bar-fill {
+    height: 100%; border-radius: 7px;
+    transition: width .6s cubic-bezier(.4,0,.2,1);
+    min-width: 4px;
+  }
+  .bar-a { background: linear-gradient(90deg, #0094B3, var(--cyan)); }
+  .bar-b { background: linear-gradient(90deg, #D97706, var(--amber)); }
+
+  .total-votes { text-align: center; font-size: .8rem; color: var(--muted); margin-top: .8rem; }
+
+  /* ── EVENT LOG ── */
+  .log-card {
+    background: var(--card);
+    border: 1px solid var(--blue);
+    border-radius: 10px;
+    padding: 1.2rem;
+  }
+  .log-inner {
+    height: 220px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column-reverse;
+  }
+  .log-inner::-webkit-scrollbar { width: 5px; }
+  .log-inner::-webkit-scrollbar-track { background: var(--dark); }
+  .log-inner::-webkit-scrollbar-thumb { background: var(--muted); border-radius: 3px; }
+
+  .log-entry {
+    display: flex;
+    align-items: center;
+    gap: .7rem;
+    padding: .4rem .5rem;
+    border-radius: 5px;
+    font-size: .82rem;
+    animation: fadeIn .3s ease;
+    margin-bottom: 2px;
+  }
+  .log-entry:hover { background: var(--dark); }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+
+  .log-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .log-time { color: var(--muted); font-size: .75rem; min-width: 55px; }
+  .log-text { flex: 1; }
+  .log-text .option-a { color: var(--cyan);  font-weight: 600; }
+  .log-text .option-b { color: var(--amber); font-weight: 600; }
+  .log-node { font-size: .72rem; padding: .15rem .5rem; border-radius: 4px; font-weight: 600; color: var(--navy); }
+
+  .log-empty { color: var(--muted); font-size: .85rem; text-align: center; padding: 2rem 0; }
+
+  /* ── DEMO COMMANDS ── */
+  .commands-card {
+    background: #0A1A0A;
+    border: 1px solid #1A4A1A;
+    border-radius: 10px;
+    padding: 1.2rem 1.5rem;
+  }
+  .commands-title { font-size: .8rem; font-weight: 700; color: var(--green); margin-bottom: .9rem; letter-spacing: .08em; }
+  .cmd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; }
+  .cmd-label { font-size: .7rem; color: var(--gray); margin-bottom: .3rem; }
+  .cmd-code {
+    background: var(--dark);
+    border: 1px solid #1A4A1A;
+    border-radius: 5px;
+    padding: .45rem .7rem;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: .78rem;
+    color: var(--green);
+    cursor: pointer;
+    transition: border-color .2s;
+    display: flex; align-items: center; gap: .5rem;
+  }
+  .cmd-code:hover { border-color: var(--green); }
+  .cmd-copy { font-size: .65rem; color: var(--muted); margin-left: auto; }
+  .cmd-code:hover .cmd-copy { color: var(--green); }
+
+  .connection-bar {
+    display: flex; align-items: center; gap: .5rem;
+    font-size: .75rem; color: var(--gray); margin-top: .7rem;
+  }
+  .connection-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
+  .connection-dot.connected { background: var(--green); animation: pulse 2s infinite; }
+
+  @media (max-width: 700px) {
+    .nodes-grid { grid-template-columns: 1fr; }
+    .cmd-grid   { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🌐 <span>Sistema Distribuido</span> · Demo</h1>
+  <div class="header-badge">EN VIVO</div>
+</header>
+
+<div class="container">
+
+  <!-- NODES MONITOR -->
+  <section>
+    <div class="section-title">Monitor de Nodos</div>
+    <div class="nodes-grid" id="nodes-grid">
+      <!-- Los nodos de Railway aparecerán aquí por auto-descubrimiento en tiempo real -->
+    </div>
+  </section>
+
+  <!-- VOTING -->
+  <section>
+    <div class="section-title">Sistema de Votación Distribuido</div>
+    <div class="vote-section">
+      <div class="vote-question">
+        ¿A qué equipo apoyas en esta batalla?
+        <br><span>Vota — un nodo diferente procesará cada click</span>
+      </div>
+      <div class="vote-buttons">
+        <button class="vote-btn btn-a" onclick="vote('A')">🔵 Team Azul</button>
+        <button class="vote-btn btn-b" onclick="vote('B')">🟠 Team Naranja</button>
+      </div>
+      <div id="last-processed"></div>
+    </div>
+  </section>
+
+  <!-- RESULTS -->
+  <section>
+    <div class="section-title">Resultados en Tiempo Real</div>
+    <div class="results-card">
+      <div class="result-row">
+        <div class="result-label-row">
+          <div class="result-name" style="color:#00B4D8">🔵 Team Azul</div>
+          <div style="display:flex;gap:.8rem;align-items:baseline">
+            <div class="result-count" id="count-a">0 votos</div>
+            <div class="result-pct" style="color:#00B4D8" id="pct-a">0%</div>
+          </div>
+        </div>
+        <div class="bar-bg"><div class="bar-fill bar-a" id="bar-a" style="width:0%"></div></div>
+      </div>
+      <div class="result-row">
+        <div class="result-label-row">
+          <div class="result-name" style="color:#F59E0B">🟠 Team Naranja</div>
+          <div style="display:flex;gap:.8rem;align-items:baseline">
+            <div class="result-count" id="count-b">0 votos</div>
+            <div class="result-pct" style="color:#F59E0B" id="pct-b">0%</div>
+          </div>
+        </div>
+        <div class="bar-bg"><div class="bar-fill bar-b" id="bar-b" style="width:0%"></div></div>
+      </div>
+      <div class="total-votes" id="total-votes">Total: 0 votos</div>
+    </div>
+  </section>
+
+  <!-- GRID: LOG + COMMANDS -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;align-items:start">
+
+    <!-- EVENT LOG -->
+    <section>
+      <div class="section-title">Log de Eventos (tiempo real · Redis Pub/Sub)</div>
+      <div class="log-card">
+        <div class="log-inner" id="event-log">
+          <div class="log-empty">Esperando eventos...</div>
+        </div>
+        <div class="connection-bar">
+          <div class="connection-dot" id="sse-dot"></div>
+          <span id="sse-status">Conectando al stream de eventos...</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- DEMO COMMANDS -->
+    <section>
+      <div class="section-title">🎯 Comandos para el Demo y Rutas</div>
+      <div class="commands-card">
+        <div class="commands-title">RUTAS ADICIONALES</div>
+        <div style="display:flex; gap: 1rem; margin-bottom: 1.5rem;">
+          <a href="/vote" target="_blank" style="padding: 0.6rem 1rem; background: var(--cyan); color: var(--navy); text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 0.85rem;">📝 Ruta de Solo Votación</a>
+          <a href="/logs" target="_blank" style="padding: 0.6rem 1rem; background: var(--dark); border: 1px solid var(--blue); color: var(--cyan); text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 0.85rem;">📡 Ver Logs en Grande</a>
+        </div>
+        <div class="commands-title">MUESTRA TOLERANCIA A FALLOS EN VIVO</div>
+        <div class="cmd-grid">
+          <div class="cmd-item">
+            <div class="cmd-label">Detener Nodo 2</div>
+            <div class="cmd-code" onclick="copyCmd(this)">
+              docker compose stop api-2
+              <span class="cmd-copy">copiar</span>
+            </div>
+          </div>
+          <div class="cmd-item">
+            <div class="cmd-label">Reiniciar Nodo 2</div>
+            <div class="cmd-code" onclick="copyCmd(this)">
+              docker compose start api-2
+              <span class="cmd-copy">copiar</span>
+            </div>
+          </div>
+          <div class="cmd-item">
+            <div class="cmd-label">Ver logs de un nodo</div>
+            <div class="cmd-code" onclick="copyCmd(this)">
+              docker compose logs api-1
+              <span class="cmd-copy">copiar</span>
+            </div>
+          </div>
+          <div class="cmd-item">
+            <div class="cmd-label">Resetear votos</div>
+            <div class="cmd-code" onclick="resetVotes()">
+              🗑️ Resetear contadores
+              <span class="cmd-copy">click</span>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:1rem;padding:.7rem;background:var(--dark);border-radius:6px;font-size:.78rem;color:var(--gray);line-height:1.6">
+          💡 <strong style="color:var(--white)">Script del Demo:</strong><br>
+          1. Muestra los 3 nodos verdes<br>
+          2. Vota varias veces → observa qué nodo procesa cada uno<br>
+          3. Detén el nodo-2 → sigue votando normalmente<br>
+          4. Revive el nodo-2 → vuelve al pool automáticamente
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<script>
+  // ── CONFIGURACIÓN DE LA API ────────────────────────────────────────────────
+  // La variable de entorno API_BASE se inyecta automáticamente al levantar Docker
+  const API_BASE = '___API_BASE___'; 
+
+  // Mapa para trackear el auto-descubrimiento de nodos de Railway (o locales)
+  const activeNodes = new Map();
+
+  const logEntries = [];
+
+  // ── Votar ──────────────────────────────────────────────────────────────────
+  async function vote(option) {
+    const btns = document.querySelectorAll('.vote-btn');
+    btns.forEach(b => b.disabled = true);
+
+    const el = document.getElementById('last-processed');
+    el.style.color = 'var(--gray)';
+    el.textContent = 'Enviando al load balancer...';
+
+    try {
+      const res  = await fetch(API_BASE + '/api/vote', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ option }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        const label = option === 'A' ? 'Team Azul' : 'Team Naranja';
+        el.style.color = data.nodeColor;
+        el.textContent = `✅ Voto por "${label}" procesado por ${data.processedBy}`;
+      }
+    } catch (e) {
+      el.style.color = 'var(--red)';
+      el.textContent = '❌ Error al enviar el voto';
+    }
+
+    setTimeout(() => { btns.forEach(b => b.disabled = false); }, 600);
+  }
+
+  // ── Actualizar resultados ──────────────────────────────────────────────────
+  function updateResults(counts) {
+    const a = counts.A || 0, b = counts.B || 0, total = a + b;
+    const pctA = total > 0 ? Math.round(a / total * 100) : 0;
+    const pctB = total > 0 ? Math.round(b / total * 100) : 0;
+
+    document.getElementById('count-a').textContent = `${a} voto${a !== 1 ? 's' : ''}`;
+    document.getElementById('count-b').textContent = `${b} voto${b !== 1 ? 's' : ''}`;
+    document.getElementById('pct-a').textContent    = `${pctA}%`;
+    document.getElementById('pct-b').textContent    = `${pctB}%`;
+    document.getElementById('bar-a').style.width    = `${Math.max(pctA, pctA > 0 ? 1 : 0)}%`;
+    document.getElementById('bar-b').style.width    = `${Math.max(pctB, pctB > 0 ? 1 : 0)}%`;
+    document.getElementById('total-votes').textContent = `Total: ${total} voto${total !== 1 ? 's' : ''}`;
+  }
+
+  // ── Agregar entrada al log ─────────────────────────────────────────────────
+  function addLogEntry(data) {
+    const log = document.getElementById('event-log');
+    const empty = log.querySelector('.log-empty');
+    if (empty) empty.remove();
+
+    const time   = new Date(data.timestamp).toLocaleTimeString('es');
+    const isA    = data.option === 'A';
+    const label  = isA ? '<span class="option-a">Team Azul</span>' : '<span class="option-b">Team Naranja</span>';
+
+    const entry = document.createElement('div');
+    entry.className = 'log-entry';
+    entry.innerHTML = `
+      <div class="log-dot" style="background:${data.nodeColor}"></div>
+      <div class="log-time">${time}</div>
+      <div class="log-text">Voto → ${label} recibido</div>
+      <div class="log-node" style="background:${data.nodeColor}">${data.processedBy}</div>
+    `;
+    log.prepend(entry);
+
+    // Mantener máximo 50 entradas
+    const entries = log.querySelectorAll('.log-entry');
+    if (entries.length > 50) entries[entries.length - 1].remove();
+  }
+
+  // ── SSE — Stream de eventos en tiempo real ─────────────────────────────────
+  let sseSource = null;
+
+  function connectSSE() {
+    if (sseSource) sseSource.close();
+
+    sseSource = new EventSource(API_BASE + '/api/events');
+
+    sseSource.onopen = () => {
+      document.getElementById('sse-dot').classList.add('connected');
+      document.getElementById('sse-status').textContent = 'Conectado al stream de eventos (Redis Pub/Sub)';
+    };
+
+    sseSource.onmessage = (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        if (data.type === 'new_vote') {
+          updateResults(data.counts);
+          addLogEntry(data);
+          registerNode(data.processedBy, data.nodeColor);
+        } else if (data.type === 'connected') {
+          registerNode(data.nodeId, data.nodeColor);
+        } else if (data.type === 'reset') {
+          updateResults({ A: 0, B: 0 });
+          document.getElementById('event-log').innerHTML = '<div class="log-empty">Contadores reseteados</div>';
+        }
+      } catch (_) {}
+    };
+
+    sseSource.onerror = () => {
+      document.getElementById('sse-dot').classList.remove('connected');
+      document.getElementById('sse-status').textContent = 'Reconectando...';
+      sseSource.close();
+      setTimeout(connectSSE, 3000);
+    };
+  }
+
+  // ── Poll estado de cada nodo individualmente ───────────────────────────────
+  async function pollNodeStatus(nodeNum) {
+    const card    = document.getElementById(`card-${nodeNum}`);
+    const statusEl = document.getElementById(`status-${nodeNum}`);
+    const votesEl  = document.getElementById(`votes-${nodeNum}`);
+    const uptimeEl = document.getElementById(`uptime-${nodeNum}`);
+
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 3000);
+
+      const res  = await fetch(NODE_URLS[nodeNum - 1], { signal: controller.signal });
+      clearTimeout(timeout);
+      const data = await res.json();
+
+      card.className = 'node-card online';
+      votesEl.textContent  = data.votesHandled;
+      uptimeEl.textContent = data.uptime;
+      statusEl.textContent = `Último ping: ${new Date().toLocaleTimeString('es')}`;
+    } catch (_) {
+      card.className = 'node-card offline';
+      votesEl.textContent  = '–';
+      uptimeEl.textContent = '–';
+      statusEl.textContent = '⚠️ Nodo no responde (offline)';
+    }
+  }
+
+  function pollAllNodes() {
+    [1, 2, 3].forEach(pollNodeStatus);
+  }
+
+  // ── Cargar votos iniciales ─────────────────────────────────────────────────
+  async function loadInitialVotes() {
+    try {
+      const res  = await fetch(API_BASE + '/api/votes');
+      const data = await res.json();
+      updateResults(data.counts);
+    } catch (_) {}
+  }
+
+  // ── Resetear sistema ───────────────────────────────────────────────────────
+  async function resetVotes() {
+    if (!confirm('¿Borrar todos los votos y empezar de cero?')) return;
+    await fetch(API_BASE + '/api/votes/reset', { method: 'DELETE' });
+  }
+
+  // ── Copiar comando al clipboard ────────────────────────────────────────────
+  function copyCmd(el) {
+    const text = el.childNodes[0].textContent.trim();
+    navigator.clipboard.writeText(text).then(() => {
+      const copy = el.querySelector('.cmd-copy');
+      copy.textContent = '✅ copiado';
+      setTimeout(() => copy.textContent = 'copiar', 2000);
+    });
+  }
+
+  // ── Arrancar ────────────────────────────────────────────────────────────────
+  connectSSE();
+  loadInitialVotes();
+  renderNodes();
+</script>
+</body>
+</html>
