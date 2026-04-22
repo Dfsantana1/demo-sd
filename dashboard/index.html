@@ -322,12 +322,12 @@
     <div class="section-title">Sistema de Votación Distribuido</div>
     <div class="vote-section">
       <div class="vote-question">
-        ¿Cuál arquitectura es mejor para un sistema grande?
+        ¿A qué equipo apoyas en esta batalla?
         <br><span>Vota — un nodo diferente procesará cada click</span>
       </div>
       <div class="vote-buttons">
-        <button class="vote-btn btn-a" onclick="vote('A')">⚡ Microservicios</button>
-        <button class="vote-btn btn-b" onclick="vote('B')">🏛️ Monolito</button>
+        <button class="vote-btn btn-a" onclick="vote('A')">🔵 Team Azul</button>
+        <button class="vote-btn btn-b" onclick="vote('B')">🟠 Team Naranja</button>
       </div>
       <div id="last-processed"></div>
     </div>
@@ -339,7 +339,7 @@
     <div class="results-card">
       <div class="result-row">
         <div class="result-label-row">
-          <div class="result-name" style="color:#00B4D8">⚡ Microservicios</div>
+          <div class="result-name" style="color:#00B4D8">🔵 Team Azul</div>
           <div style="display:flex;gap:.8rem;align-items:baseline">
             <div class="result-count" id="count-a">0 votos</div>
             <div class="result-pct" style="color:#00B4D8" id="pct-a">0%</div>
@@ -349,7 +349,7 @@
       </div>
       <div class="result-row">
         <div class="result-label-row">
-          <div class="result-name" style="color:#F59E0B">🏛️ Monolito</div>
+          <div class="result-name" style="color:#F59E0B">🟠 Team Naranja</div>
           <div style="display:flex;gap:.8rem;align-items:baseline">
             <div class="result-count" id="count-b">0 votos</div>
             <div class="result-pct" style="color:#F59E0B" id="pct-b">0%</div>
@@ -456,7 +456,7 @@
       });
       const data = await res.json();
       if (data.success) {
-        const label = option === 'A' ? 'Microservicios' : 'Monolito';
+        const label = option === 'A' ? 'Team Azul' : 'Team Naranja';
         el.style.color = data.nodeColor;
         el.textContent = `✅ Voto por "${label}" procesado por ${data.processedBy}`;
       }
@@ -491,7 +491,7 @@
 
     const time   = new Date(data.timestamp).toLocaleTimeString('es');
     const isA    = data.option === 'A';
-    const label  = isA ? '<span class="option-a">Microservicios</span>' : '<span class="option-b">Monolito</span>';
+    const label  = isA ? '<span class="option-a">Team Azul</span>' : '<span class="option-b">Team Naranja</span>';
 
     const entry = document.createElement('div');
     entry.className = 'log-entry';
