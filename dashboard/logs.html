@@ -190,7 +190,13 @@
 
     es.onmessage = (e) => {
       const event = JSON.parse(e.data);
-      if (event.type === 'vote') addLogEntry(event);
+      if (event.type === 'new_vote') {
+        addLogEntry(event);
+      } else if (event.type === 'reset') {
+        const log = document.getElementById('event-log');
+        log.innerHTML = '<div class="log-empty">Contadores reseteados</div>';
+        logEntries.length = 0;
+      }
     };
   }
 
