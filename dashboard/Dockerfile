@@ -1,15 +1,25 @@
 FROM nginx:alpine
 
-# Copiamos nuestros archivos del dashboard (index.html, logs.html, vote.html)
-# al directorio por defecto que usa NGINX para servir páginas web
+# Copiamos nuestros archivos del dashboard
 COPY . /usr/share/nginx/html
 
-# Exponer el puerto
-EXPOSE 80
+# Plantilla de configuración de NGINX que acepta puertos dinámicos ($PORT de Railway)
+RUN echo 'server { \
+    listen       ${PORT}; \
+    listen  [::]:${PORT}; \
+    server_name  localhost; \
+    location / { \
+        root   /usr/share/nginx/html; \
+        index  index.html; \
+        try_files $uri $uri.html $uri/ /index.html; \
+    } \
+}' > /etc/nginx/conf.d/default.conf.template
 
-# Reemplazamos el puerto por defecto de nginx por el proporcionado por Railway ($PORT)
-# Y luego reemplazamos nuestro placeholder '___API_BASE___' por $API_BASE en todos los HTML
-CMD sed -i -e 's/listen  .*80;/listen '"${PORT:-80}"';/g' /etc/nginx/conf.d/default.conf && \
-    sed -i "s|___API_BASE___|${API_BASE}|g" /usr/share/nginx/html/*.html && \
+# Al iniciar:
+# 1. Inyectamos la URL de la API en el HTML.
+# 2. Inyectamos el $PORT en la configuración de NGINX con envsubst.
+# 3. Arrancamos NGINX.
+CMD sed -i "s|___API_BASE___|${API_BASE}|g" /usr/share/nginx/html/*.html && \
+    envsubst '${PORT}' < /etc/nginx/conf.d/default.conf.template > /etc/nginx/conf.d/default.conf && \
     nginx -g "daemon off;"
   
