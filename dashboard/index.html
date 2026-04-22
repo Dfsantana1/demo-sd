@@ -257,63 +257,8 @@
   <!-- NODES MONITOR -->
   <section>
     <div class="section-title">Monitor de Nodos</div>
-    <div class="nodes-grid">
-      <div class="node-card" id="card-1" style="--node-color:#00B4D8">
-        <div class="node-header">
-          <div class="status-dot"></div>
-          <div class="node-name" style="color:#00B4D8">Nodo 1</div>
-          <div class="node-tag">api-1</div>
-        </div>
-        <div class="node-stats">
-          <div class="stat">
-            <div class="stat-val" id="votes-1">–</div>
-            <div class="stat-label">Votos procesados</div>
-          </div>
-          <div class="stat">
-            <div class="stat-val" id="uptime-1">–</div>
-            <div class="stat-label">Uptime (seg)</div>
-          </div>
-        </div>
-        <div class="node-uptime" id="status-1">Verificando...</div>
-      </div>
-
-      <div class="node-card" id="card-2" style="--node-color:#10B981">
-        <div class="node-header">
-          <div class="status-dot"></div>
-          <div class="node-name" style="color:#10B981">Nodo 2</div>
-          <div class="node-tag">api-2</div>
-        </div>
-        <div class="node-stats">
-          <div class="stat">
-            <div class="stat-val" id="votes-2">–</div>
-            <div class="stat-label">Votos procesados</div>
-          </div>
-          <div class="stat">
-            <div class="stat-val" id="uptime-2">–</div>
-            <div class="stat-label">Uptime (seg)</div>
-          </div>
-        </div>
-        <div class="node-uptime" id="status-2">Verificando...</div>
-      </div>
-
-      <div class="node-card" id="card-3" style="--node-color:#F59E0B">
-        <div class="node-header">
-          <div class="status-dot"></div>
-          <div class="node-name" style="color:#F59E0B">Nodo 3</div>
-          <div class="node-tag">api-3</div>
-        </div>
-        <div class="node-stats">
-          <div class="stat">
-            <div class="stat-val" id="votes-3">–</div>
-            <div class="stat-label">Votos procesados</div>
-          </div>
-          <div class="stat">
-            <div class="stat-val" id="uptime-3">–</div>
-            <div class="stat-label">Uptime (seg)</div>
-          </div>
-        </div>
-        <div class="node-uptime" id="status-3">Verificando...</div>
-      </div>
+    <div class="nodes-grid" id="nodes-grid">
+      <!-- Los nodos de Railway aparecerán aquí por auto-descubrimiento en tiempo real -->
     </div>
   </section>
 
@@ -436,11 +381,9 @@
   // La variable de entorno API_BASE se inyecta automáticamente al levantar Docker
   const API_BASE = '___API_BASE___'; 
 
-  const NODE_URLS = [
-    API_BASE + '/api/node/1/status',
-    API_BASE + '/api/node/2/status',
-    API_BASE + '/api/node/3/status',
-  ];
+  // Mapa para trackear el auto-descubrimiento de nodos de Railway (o locales)
+  const activeNodes = new Map();
+
   const logEntries = [];
 
   // ── Votar ──────────────────────────────────────────────────────────────────
@@ -531,6 +474,9 @@
         if (data.type === 'new_vote') {
           updateResults(data.counts);
           addLogEntry(data);
+          registerNode(data.processedBy, data.nodeColor);
+        } else if (data.type === 'connected') {
+          registerNode(data.nodeId, data.nodeColor);
         } else if (data.type === 'reset') {
           updateResults({ A: 0, B: 0 });
           document.getElementById('event-log').innerHTML = '<div class="log-empty">Contadores reseteados</div>';
@@ -546,35 +492,6 @@
     };
   }
 
-  // ── Poll estado de cada nodo individualmente ───────────────────────────────
-  async function pollNodeStatus(nodeNum) {
-    const card    = document.getElementById(`card-${nodeNum}`);
-    const statusEl = document.getElementById(`status-${nodeNum}`);
-    const votesEl  = document.getElementById(`votes-${nodeNum}`);
-    const uptimeEl = document.getElementById(`uptime-${nodeNum}`);
-
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 3000);
-
-      const res  = await fetch(NODE_URLS[nodeNum - 1], { signal: controller.signal });
-      clearTimeout(timeout);
-      const data = await res.json();
-
-      card.className = 'node-card online';
-      votesEl.textContent  = data.votesHandled;
-      uptimeEl.textContent = data.uptime;
-      statusEl.textContent = `Último ping: ${new Date().toLocaleTimeString('es')}`;
-    } catch (_) {
-      card.className = 'node-card offline';
-      votesEl.textContent  = '–';
-      uptimeEl.textContent = '–';
-      statusEl.textContent = '⚠️ Nodo no responde (offline)';
-    }
-  }
-
-  function pollAllNodes() {
-    [1, 2, 3].forEach(pollNodeStatus);
   }
 
   // ── Cargar votos iniciales ─────────────────────────────────────────────────
@@ -602,11 +519,10 @@
     });
   }
 
-  // ── Arrancar ───────────────────────────────────────────────────────────────
+  // ── Arrancar ────────────────────────────────────────────────────────────────
   connectSSE();
   loadInitialVotes();
-  pollAllNodes();
-  setInterval(pollAllNodes, 3000);
+  renderNodes();
 </script>
 </body>
 </html>
