@@ -379,7 +379,11 @@
 <script>
   // ── CONFIGURACIÓN DE LA API ────────────────────────────────────────────────
   // La variable de entorno API_BASE se inyecta automáticamente al levantar Docker
-  const API_BASE = '___API_BASE___'; 
+  const DEFAULT_API_BASE = 'https://demo-sd-production.up.railway.app';
+  const INJECTED_API_BASE = '___API_BASE___';
+  const API_BASE = (INJECTED_API_BASE === '___API_BASE___'
+    ? DEFAULT_API_BASE
+    : INJECTED_API_BASE).replace(/\/$/, '');
 
   // Mapa para trackear el auto-descubrimiento de nodos de Railway (o locales)
   const activeNodes = new Map();
@@ -492,7 +496,53 @@
     };
   }
 
+  // ── Auto-descubrimiento de nodos ──────────────────────────────────────────
+  function registerNode(nodeId, nodeColor) {
+    if (!nodeId) return;
+    const isNew = !activeNodes.has(nodeId);
+    activeNodes.set(nodeId, {
+      color: nodeColor || '#00B4D8',
+      lastSeen: Date.now()
+    });
+    if (isNew) renderNodes();
+  }
+
+  function renderNodes() {
+    const grid = document.getElementById('nodes-grid');
+    if (!grid) return;
+    
+    // Cleanup de nodos muertos (no vistos en > 15s)
+    const now = Date.now();
+    let changed = false;
+    for (const [id, data] of activeNodes.entries()) {
+      if (now - data.lastSeen > 15000) {
+        activeNodes.delete(id);
+        changed = true;
+      }
+    }
+    
+    if (activeNodes.size === 0) {
+      grid.innerHTML = '<div style="color:var(--gray);text-align:center;grid-column:1/-1;padding:2rem;">Esperando nodos disponibles...</div>';
+      return;
+    }
+    
+    let html = '';
+    for (const [id, data] of activeNodes.entries()) {
+      html += `
+        <div class="node-card online" style="--node-color: ${data.color}">
+          <div class="node-header">
+            <div class="status-dot"></div>
+            <div class="node-name" style="font-size:0.9rem">${id}</div>
+          </div>
+          <div class="node-uptime">Recibiendo tráfico</div>
+        </div>
+      `;
+    }
+    grid.innerHTML = html;
+  }
   
+  // Limpiar nodos inactivos periódicamente
+  setInterval(renderNodes, 3000);
 
   // ── Cargar votos iniciales ─────────────────────────────────────────────────
   async function loadInitialVotes() {

@@ -137,7 +137,11 @@
 <script>
   // ── CONFIGURACIÓN DE LA API ────────────────────────────────────────────────
   // La variable de entorno API_BASE se inyecta automáticamente al levantar Docker
-  const API_BASE = '___API_BASE___';
+  const DEFAULT_API_BASE = 'https://demo-sd-production.up.railway.app';
+  const INJECTED_API_BASE = '___API_BASE___';
+  const API_BASE = (INJECTED_API_BASE === '___API_BASE___'
+    ? DEFAULT_API_BASE
+    : INJECTED_API_BASE).replace(/\/$/, '');
 
   let sseReconnecting = false;
   let es = null;
