@@ -104,6 +104,10 @@
 </div>
 
 <script>
+  // ── CONFIGURACIÓN DE LA API ────────────────────────────────────────────────
+  // La variable de entorno API_BASE se inyecta automáticamente al levantar Docker
+  const API_BASE = '___API_BASE___';
+
   async function vote(option) {
     const btns = document.querySelectorAll('.vote-btn');
     btns.forEach(b => b.disabled = true);
@@ -113,7 +117,7 @@
     el.textContent = 'Enviando voto...';
 
     try {
-      const res  = await fetch('/api/vote', {
+      const res  = await fetch(API_BASE + '/api/vote', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ option }),

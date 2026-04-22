@@ -432,10 +432,14 @@
 </div>
 
 <script>
+  // ── CONFIGURACIÓN DE LA API ────────────────────────────────────────────────
+  // La variable de entorno API_BASE se inyecta automáticamente al levantar Docker
+  const API_BASE = '___API_BASE___'; 
+
   const NODE_URLS = [
-    '/api/node/1/status',
-    '/api/node/2/status',
-    '/api/node/3/status',
+    API_BASE + '/api/node/1/status',
+    API_BASE + '/api/node/2/status',
+    API_BASE + '/api/node/3/status',
   ];
   const logEntries = [];
 
@@ -449,7 +453,7 @@
     el.textContent = 'Enviando al load balancer...';
 
     try {
-      const res  = await fetch('/api/vote', {
+      const res  = await fetch(API_BASE + '/api/vote', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ option }),
@@ -514,7 +518,7 @@
   function connectSSE() {
     if (sseSource) sseSource.close();
 
-    sseSource = new EventSource('/api/events');
+    sseSource = new EventSource(API_BASE + '/api/events');
 
     sseSource.onopen = () => {
       document.getElementById('sse-dot').classList.add('connected');
@@ -576,16 +580,16 @@
   // ── Cargar votos iniciales ─────────────────────────────────────────────────
   async function loadInitialVotes() {
     try {
-      const res  = await fetch('/api/votes');
+      const res  = await fetch(API_BASE + '/api/votes');
       const data = await res.json();
       updateResults(data.counts);
     } catch (_) {}
   }
 
-  // ── Resetear votos ─────────────────────────────────────────────────────────
+  // ── Resetear sistema ───────────────────────────────────────────────────────
   async function resetVotes() {
-    if (!confirm('¿Resetear todos los contadores de votos?')) return;
-    await fetch('/api/votes/reset', { method: 'DELETE' });
+    if (!confirm('¿Borrar todos los votos y empezar de cero?')) return;
+    await fetch(API_BASE + '/api/votes/reset', { method: 'DELETE' });
   }
 
   // ── Copiar comando al clipboard ────────────────────────────────────────────

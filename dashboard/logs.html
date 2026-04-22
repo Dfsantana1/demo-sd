@@ -135,6 +135,10 @@
 </div>
 
 <script>
+  // ── CONFIGURACIÓN DE LA API ────────────────────────────────────────────────
+  // La variable de entorno API_BASE se inyecta automáticamente al levantar Docker
+  const API_BASE = '___API_BASE___';
+
   let sseReconnecting = false;
   let es = null;
   const logEntries = [];
@@ -168,7 +172,7 @@
   }
 
   function startSSE() {
-    es = new EventSource('/api/events');
+    es = new EventSource(API_BASE + '/api/events');
     const dot = document.getElementById('sse-dot');
     const lbl = document.getElementById('sse-status');
 
