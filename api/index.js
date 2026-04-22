@@ -7,24 +7,25 @@ const app  = express();
 app.use(express.json());
 app.use(cors());
 
-// ── Configuración por variable de entorno (cada nodo tiene la suya) ─────────
-const NODE_ID    = process.env.NODE_ID    || 'nodo-1';
+// ── Configuración por variable de entorno (cada nodo tiene la suya)
+// NODE_ID: preferimos la variable NODE_ID; si no existe (por ejemplo al escalar
+// en un PaaS) usamos el hostname del contenedor/proceso como identificador.
+const NODE_ID    = process.env.NODE_ID    || process.env.HOSTNAME || 'nodo-1';
 const NODE_COLOR = process.env.NODE_COLOR || '#00B4D8';
 const PORT       = process.env.PORT       || 3001;
 
 // ── Clientes Redis ────────────────────────────────────────────────────────────
 // Un cliente para comandos, otro para subscripción (redis no permite ambos en uno)
-const redisPub = createClient({ url: 'redis://redis:6379' });
-const redisSub = createClient({ url: 'redis://redis:6379' });
+// Allow overriding Redis URL via env (Railway/Render provide REDIS_URL)
+const REDIS_URL = process.env.REDIS_URL || 'redis://redis:6379';
+const redisPub = createClient({ url: REDIS_URL });
+const redisSub = createClient({ url: REDIS_URL });
 
 // ── PostgreSQL Pool ───────────────────────────────────────────────────────────
-const pool = new Pool({
-  host:     'postgres',
-  database: 'votacion',
-  user:     'admin',
-  password: 'admin123',
-  port:     5432,
-});
+// Allow using a DATABASE_URL (Railway provides DATABASE_URL). Fall back to
+// the local docker-compose postgres host when not provided.
+const PG_CONN = process.env.DATABASE_URL || 'postgresql://admin:admin123@postgres:5432/votacion';
+const pool = new Pool({ connectionString: PG_CONN });
 
 // ── SSE clients conectados a ESTE nodo ────────────────────────────────────────
 let sseClients = [];
